@@ -113,7 +113,7 @@ def option(default, *args):
 
 
 class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    create_child = staticmethod(mitogen.parent.tty_create_child)
     child_is_immediate_subprocess = False
 
     #: Once connected, points to the corresponding DiagLogStream, allowing it to
@@ -178,11 +178,12 @@ class Stream(mitogen.parent.Stream):
     password_required_msg = 'sudo password is required'
 
     def _connect_bootstrap(self, extra_fd):
-        self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
+        if extra_fd:
+            self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
 
         password_sent = False
         it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd, extra_fd],
+            fds=[self.receive_side.fd],
             deadline=self.connect_deadline,
         )
 
@@ -196,7 +197,7 @@ class Stream(mitogen.parent.Stream):
                     raise PasswordError(self.password_required_msg)
                 if password_sent:
                     raise PasswordError(self.password_incorrect_msg)
-                self.tty_stream.transmit_side.write(
+                self.receive_side.write(
                     mitogen.core.to_text(self.password + '\n').encode('utf-8')
                 )
                 password_sent = True
