@@ -1,0 +1,40 @@
+	Command being timed: "./run_ansible_playbook.py -l localhost -u dmw bench/loop-100-items.yml"
+	User time (seconds): 3.00
+	System time (seconds): 1.13
+	Percent of CPU this job got: 21%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:19.40
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 58496
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 307583
+	Voluntary context switches: 24671
+	Involuntary context switches: 377
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 136
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+ Performance counter stats for '/usr/bin/time -v ./run_ansible_playbook.py -l localhost -u dmw bench/loop-100-items.yml':
+
+       4453.350209      task-clock (msec)         #    0.230 CPUs utilized          
+            26,595      context-switches          #    0.006 M/sec                  
+             1,270      cpu-migrations            #    0.285 K/sec                  
+           307,740      page-faults               #    0.069 M/sec                  
+    11,982,078,809      cycles                    #    2.691 GHz                    
+    11,187,494,638      instructions              #    0.93  insn per cycle         
+     2,197,538,420      branches                  #  493.457 M/sec                  
+        73,662,979      branch-misses             #    3.35% of all branches        
+
+      19.404488583 seconds time elapsed
+
+       3.007164000 seconds user
+       1.137026000 seconds sys
+

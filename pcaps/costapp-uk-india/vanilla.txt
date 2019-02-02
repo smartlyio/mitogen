@@ -1,0 +1,39 @@
+	Command being timed: "ansible-playbook live.yml"
+	User time (seconds): 16.58
+	System time (seconds): 5.18
+	Percent of CPU this job got: 17%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:01.75
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 51896
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 376170
+	Voluntary context switches: 99227
+	Involuntary context switches: 1872
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 2576
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+ Performance counter stats for '/usr/bin/time -v ansible-playbook live.yml':
+
+      20753.702240      task-clock (msec)         #    0.170 CPUs utilized          
+           101,488      context-switches          #    0.005 M/sec                  
+             3,158      cpu-migrations            #    0.152 K/sec                  
+           376,427      page-faults               #    0.018 M/sec                  
+    33,127,141,348      cycles                    #    1.596 GHz                    
+    29,457,276,033      instructions              #    0.89  insn per cycle         
+     5,910,258,932      branches                  #  284.781 M/sec                  
+       179,028,505      branch-misses             #    3.03% of all branches        
+
+     121.760094125 seconds time elapsed
+
+      16.587295000 seconds user
+       5.187009000 seconds sys

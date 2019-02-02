@@ -1,0 +1,40 @@
+	Command being timed: "./mitogen_ansible_playbook.py -l localhost bench/loop-100-items.yml -u dmw"
+	User time (seconds): 2.02
+	System time (seconds): 0.32
+	Percent of CPU this job got: 57%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:04.06
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 58660
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 69776
+	Voluntary context switches: 5458
+	Involuntary context switches: 2923
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 8
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+ Performance counter stats for '/usr/bin/time -v ./mitogen_ansible_playbook.py -l localhost bench/loop-100-items.yml -u dmw':
+
+       2995.057487      task-clock (msec)         #    0.736 CPUs utilized          
+            11,278      context-switches          #    0.004 M/sec                  
+                42      cpu-migrations            #    0.014 K/sec                  
+            79,227      page-faults               #    0.026 M/sec                  
+     7,679,706,035      cycles                    #    2.564 GHz                    
+     9,291,981,533      instructions              #    1.21  insn per cycle         
+     1,900,085,928      branches                  #  634.407 M/sec                  
+        47,992,568      branch-misses             #    2.53% of all branches        
+
+       4.067464608 seconds time elapsed
+
+       2.021601000 seconds user
+       0.321530000 seconds sys
+
