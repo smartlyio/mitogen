@@ -1,0 +1,18 @@
+[
+    {
+        "title": "Mitogen",
+        "path": "default.pcapng.gz"
+    },
+    {
+        "title": "SSH Pipelining",
+        "path": "vanilla.pcapng.gz"
+    },
+    {
+        "title": "Mitogen (Uncompressed)",
+        "path": "uncompressed.pcapng.gz"
+    },
+    {
+        "title": "SSH Pipelining (Compressed)",
+        "path": "vanilla-uncompressed.pcapng.gz"
+    }
+]

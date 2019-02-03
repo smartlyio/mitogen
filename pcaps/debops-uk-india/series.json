@@ -1,0 +1,11 @@
+[
+    {
+        "title": "Mitogen",
+        "path": "mitogen.pcapng.gz",
+        "stream": 0
+    },
+    {
+        "title": "SSH Pipelining",
+        "path": "vanilla.pcapng.gz"
+    }
+]
