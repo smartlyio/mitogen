@@ -1,0 +1,10 @@
+[
+    {
+        "title": "Vanilla",
+        "path": "vanilla-net.pcap.gz"
+    },
+    {
+        "title": "Mitogen",
+        "path": "default-net.pcap.gz"
+    }
+]
