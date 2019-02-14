@@ -956,10 +956,10 @@ class Broker(mitogen.core.Broker):
         non-payment results in termination for one customer.
 
     :param bool install_watcher:
-        If :data:`True`, an additional thread is started to monitor the
-        lifetime of the main thread, triggering :meth:`shutdown`
-        automatically in case the user forgets to call it, or their code
-        crashed.
+        If :data:`True` and `threadless` is :data:`False`, an additional thread
+        is started to monitor the lifetime of the main thread, triggering
+        :meth:`shutdown` automatically in case the user forgets to call it, or
+        their code crashed.
 
         You should not rely on this functionality in your program, it is only
         intended as a fail-safe and to simplify the API for new users. In
@@ -971,12 +971,12 @@ class Broker(mitogen.core.Broker):
     poller_class = mitogen.parent.PREFERRED_POLLER
 
     def __init__(self, install_watcher=True, **kwargs):
-        if install_watcher:
+        super(Broker, self).__init__(**kwargs)
+        if install_watcher and not self.threadless:
             self._watcher = ThreadWatcher.watch(
                 target=threading.currentThread(),
                 on_join=self.shutdown,
             )
-        super(Broker, self).__init__(**kwargs)
 
     def shutdown(self):
         super(Broker, self).shutdown()

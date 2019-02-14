@@ -1208,7 +1208,8 @@ class Stream(mitogen.core.Stream):
 
     def construct(self, max_message_size, remote_name=None, python_path=None,
                   debug=False, connect_timeout=None, profiling=False,
-                  unidirectional=False, old_router=None, **kwargs):
+                  unidirectional=False, old_router=None,
+                  threadless=False, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
@@ -1225,6 +1226,7 @@ class Stream(mitogen.core.Stream):
         self.debug = debug
         self.profiling = profiling
         self.unidirectional = unidirectional
+        self.threadless = threadless
         self.max_message_size = max_message_size
         self.connect_deadline = time.time() + self.connect_timeout
 
@@ -1384,6 +1386,7 @@ class Stream(mitogen.core.Stream):
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.max_message_size,
+            'threadless': self.threadless,
             'version': mitogen.__version__,
         }
 

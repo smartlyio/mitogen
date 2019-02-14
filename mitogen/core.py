@@ -103,7 +103,6 @@ IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
 LATIN1_CODEC = encodings.latin_1.Codec()
-THREADLESS_BROKER = None
 
 _v = False
 _vv = False
@@ -926,7 +925,8 @@ class Receiver(object):
         self.router = router
         #: The handle.
         self.handle = handle  # Avoid __repr__ crash in add_handler()
-        self._latch = Latch()  # Must exist prior to .add_handler()
+        # Must exist prior to .add_handler()
+        self._latch = Latch(broker=router.broker)
         self.handle = router.add_handler(
             fn=self._on_receive,
             handle=handle,
@@ -1132,7 +1132,7 @@ class Importer(object):
         self.master_blacklist = self.blacklist[:]
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
-        self._callbacks = {}
+        self._waiters = {}
         self._cache = {}
         if core_src:
             self._update_linecache('x/mitogen/core.py', core_src)
@@ -1279,42 +1279,41 @@ class Importer(object):
                     path='master:' + tup[2],
                     data=zlib.decompress(tup[3])
                 )
-            callbacks = self._callbacks.pop(fullname, [])
+            waiters = self._waiters.pop(fullname, [])
         finally:
             self._lock.release()
 
-        for callback in callbacks:
-            callback()
+        for latch in waiters:
+            latch.put(None)
 
-    def _request_module(self, fullname, callback):
+    def _request_module(self, fullname):
         self._lock.acquire()
         try:
             present = fullname in self._cache
             if not present:
-                funcs = self._callbacks.get(fullname)
-                if funcs is not None:
+                latch = Latch(broker=self._context.router.broker)
+                waiters = self._waiters.get(fullname)
+                if waiters is not None:
                     _v and LOG.debug('_request_module(%r): in flight', fullname)
-                    funcs.append(callback)
+                    waiters.append(latch)
                 else:
                     _v and LOG.debug('_request_module(%r): new request', fullname)
-                    self._callbacks[fullname] = [callback]
+                    self._waiters[fullname] = [latch]
                     self._context.send(
                         Message(data=b(fullname), handle=GET_MODULE)
                     )
+                return latch
         finally:
             self._lock.release()
-
-        if present:
-            callback()
 
     def load_module(self, fullname):
         fullname = to_text(fullname)
         _v and LOG.debug('Importer.load_module(%r)', fullname)
         self._refuse_imports(fullname)
 
-        event = threading.Event()
-        self._request_module(fullname, event.set)
-        event.wait()
+        latch = self._request_module(fullname)
+        if latch:
+            latch.get()
 
         ret = self._cache[fullname]
         if ret[2] is None:
@@ -2065,8 +2064,9 @@ class Latch(object):
     #: reference the same underlying kernel object in use by the parent.
     _cls_all_sockets = []
 
-    def __init__(self):
+    def __init__(self, broker=None):
         self.closed = False
+        self._broker = broker
         self._lock = threading.Lock()
         #: List of unconsumed enqueued items.
         self._queue = []
@@ -2211,18 +2211,17 @@ class Latch(object):
         e = None
         woken = None
         try:
-            if THREADLESS_BROKER is not None:
-                print 'hi'
-                deadline = None
+            if self._broker and self._broker.threadless:
+                remain = None
                 if timeout:
                     deadline = time.time() + timeout
-                    remain = lambda: max(0, deadline - time.time())
-                else:
-                    remain = lambda: 0xfffff
-                while (deadline is None or time.time() < deadline) and not list(poller.poll(0.0)):
-                    print 'do loop', dict(timeout=remain())
-                    THREADLESS_BROKER._loop_once(timeout=remain())
-                woken = True
+                while not woken:
+                    if timeout:
+                        remain = deadline - time.time()
+                        if not remain:
+                            break
+                    self._broker._loop_once(timeout=remain)
+                    woken = len(self._queue) > 0
             else:
                 woken = list(poller.poll(timeout))
         except Exception:
@@ -2837,6 +2836,7 @@ class Broker(object):
     used by child contexts. The master subclass is documented below.
     """
     poller_class = Poller
+    threadless = False
     _waker = None
     _thread = None
 
@@ -2845,6 +2845,7 @@ class Broker(object):
     shutdown_timeout = 3.0
 
     def __init__(self, poller_class=None, threadless=False):
+        self.threadless = threadless
         self._alive = True
         self._exitted = False
         self._waker = Waker(self)
@@ -2857,10 +2858,7 @@ class Broker(object):
             self._waker.receive_side.fd,
             (self._waker.receive_side, self._waker.on_receive)
         )
-        if threadless:
-            global THREADLESS_BROKER
-            THREADLESS_BROKER = self
-        else:
+        if not self.threadless:
             self._thread = threading.Thread(
                 target=self._broker_main,
                 name='mitogen.broker'
@@ -2926,7 +2924,7 @@ class Broker(object):
         :returns:
             Return value of `func()`.
         """
-        latch = Latch()
+        latch = Latch(broker=self)
         def wrapper():
             try:
                 latch.put(func())
@@ -3214,7 +3212,7 @@ class ExternalContext(object):
         Router.max_message_size = self.config['max_message_size']
         if self.config['profiling']:
             enable_profiling()
-        self.broker = Broker()
+        self.broker = Broker(threadless=self.config.get('threadless', False))
         self.router = Router(self.broker)
         self.router.debug = self.config.get('debug', False)
         self.router.undirectional = self.config['unidirectional']
