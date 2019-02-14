@@ -970,13 +970,13 @@ class Broker(mitogen.core.Broker):
     _watcher = None
     poller_class = mitogen.parent.PREFERRED_POLLER
 
-    def __init__(self, install_watcher=True):
+    def __init__(self, install_watcher=True, **kwargs):
         if install_watcher:
             self._watcher = ThreadWatcher.watch(
                 target=threading.currentThread(),
                 on_join=self.shutdown,
             )
-        super(Broker, self).__init__()
+        super(Broker, self).__init__(**kwargs)
 
     def shutdown(self):
         super(Broker, self).shutdown()

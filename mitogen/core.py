@@ -103,6 +103,7 @@ IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
 LATIN1_CODEC = encodings.latin_1.Codec()
+THREADLESS_BROKER = None
 
 _v = False
 _vv = False
@@ -2210,7 +2211,20 @@ class Latch(object):
         e = None
         woken = None
         try:
-            woken = list(poller.poll(timeout))
+            if THREADLESS_BROKER is not None:
+                print 'hi'
+                deadline = None
+                if timeout:
+                    deadline = time.time() + timeout
+                    remain = lambda: max(0, deadline - time.time())
+                else:
+                    remain = lambda: 0xfffff
+                while (deadline is None or time.time() < deadline) and not list(poller.poll(0.0)):
+                    print 'do loop', dict(timeout=remain())
+                    THREADLESS_BROKER._loop_once(timeout=remain())
+                woken = True
+            else:
+                woken = list(poller.poll(timeout))
         except Exception:
             e = sys.exc_info()[1]
 
@@ -2830,7 +2844,7 @@ class Broker(object):
     #: before force-disconnecting them during :meth:`shutdown`.
     shutdown_timeout = 3.0
 
-    def __init__(self, poller_class=None):
+    def __init__(self, poller_class=None, threadless=False):
         self._alive = True
         self._exitted = False
         self._waker = Waker(self)
@@ -2843,11 +2857,15 @@ class Broker(object):
             self._waker.receive_side.fd,
             (self._waker.receive_side, self._waker.on_receive)
         )
-        self._thread = threading.Thread(
-            target=self._broker_main,
-            name='mitogen.broker'
-        )
-        self._thread.start()
+        if threadless:
+            global THREADLESS_BROKER
+            THREADLESS_BROKER = self
+        else:
+            self._thread = threading.Thread(
+                target=self._broker_main,
+                name='mitogen.broker'
+            )
+            self._thread.start()
 
     def start_receive(self, stream):
         """
