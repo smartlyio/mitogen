@@ -926,7 +926,7 @@ class Receiver(object):
         #: The handle.
         self.handle = handle  # Avoid __repr__ crash in add_handler()
         # Must exist prior to .add_handler()
-        self._latch = Latch(broker=router.broker)
+        self._latch = router.broker.latch_class(broker=router.broker)
         self.handle = router.add_handler(
             fn=self._on_receive,
             handle=handle,
@@ -1291,7 +1291,8 @@ class Importer(object):
         try:
             present = fullname in self._cache
             if not present:
-                latch = Latch(broker=self._context.router.broker)
+                broker = self._context.router.broker
+                latch = broker.latch_class(broker=broker)
                 waiters = self._waiters.get(fullname)
                 if waiters is not None:
                     _v and LOG.debug('_request_module(%r): in flight', fullname)
@@ -2211,19 +2212,7 @@ class Latch(object):
         e = None
         woken = None
         try:
-            if self._broker and self._broker.threadless:
-                remain = None
-                if timeout:
-                    deadline = time.time() + timeout
-                while not woken:
-                    if timeout:
-                        remain = deadline - time.time()
-                        if not remain:
-                            break
-                    self._broker._loop_once(timeout=remain)
-                    woken = len(self._queue) > 0
-            else:
-                woken = list(poller.poll(timeout))
+            woken = list(poller.poll(timeout))
         except Exception:
             e = sys.exc_info()[1]
 
@@ -2289,6 +2278,30 @@ class Latch(object):
         )
 
 
+class ThreadlessLatch(Latch):
+    def put(self, obj):
+        self._queue.append(obj)
+
+    def get(self, timeout=None, block=True):
+        if self._queue:
+            return self._queue.pop()
+        if not block:
+            raise TimeoutError()
+
+        remain = None
+        if timeout:
+            deadline = time.time() + timeout
+        while True:
+            if timeout:
+                remain = deadline - time.time()
+                if remain <= 0:
+                    raise TimeoutError()
+            self._broker._waker.on_receive(self._broker)
+            self._broker._loop_once(timeout=remain)
+            if self._queue:
+                return self._queue.pop()
+
+
 class Waker(BasicStream):
     """
     :class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
@@ -2333,13 +2346,17 @@ class Waker(BasicStream):
         ensure only one byte needs to be pending regardless of queue length.
         """
         _vv and IOLOG.debug('%r.on_receive()', self)
-        self._lock.acquire()
-        try:
-            self.receive_side.read(1)
+        if broker.threadless:
             deferred = self._deferred
             self._deferred = []
-        finally:
-            self._lock.release()
+        else:
+            self._lock.acquire()
+            try:
+                self.receive_side.read(1)
+                deferred = self._deferred
+                self._deferred = []
+            finally:
+                self._lock.release()
 
         for func, args, kwargs in deferred:
             try:
@@ -2383,13 +2400,16 @@ class Waker(BasicStream):
             raise Error(self.broker_shutdown_msg)
 
         _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
-        self._lock.acquire()
-        try:
-            if not self._deferred:
-                self._wake()
+        if self._broker.threadless:
             self._deferred.append((func, args, kwargs))
-        finally:
-            self._lock.release()
+        else:
+            self._lock.acquire()
+            try:
+                if not self._deferred:
+                    self._wake()
+                self._deferred.append((func, args, kwargs))
+            finally:
+                self._lock.release()
 
 
 class IoLogger(BasicStream):
@@ -2837,6 +2857,7 @@ class Broker(object):
     """
     poller_class = Poller
     threadless = False
+    latch_class = Latch
     _waker = None
     _thread = None
 
@@ -2846,6 +2867,8 @@ class Broker(object):
 
     def __init__(self, poller_class=None, threadless=False):
         self.threadless = threadless
+        if threadless:
+            self.latch_class = ThreadlessLatch
         self._alive = True
         self._exitted = False
         self._waker = Waker(self)
@@ -2924,7 +2947,7 @@ class Broker(object):
         :returns:
             Return value of `func()`.
         """
-        latch = Latch(broker=self)
+        latch = self.latch_class(broker=self)
         def wrapper():
             try:
                 latch.put(func())
