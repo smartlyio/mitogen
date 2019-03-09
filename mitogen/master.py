@@ -977,6 +977,7 @@ class Broker(mitogen.core.Broker):
                 on_join=self.shutdown,
             )
         super(Broker, self).__init__()
+        self.timers = mitogen.parent.TimerList()
 
     def shutdown(self):
         super(Broker, self).shutdown()
