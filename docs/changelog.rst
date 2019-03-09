@@ -28,6 +28,14 @@ Fixes
   on machines with high CPU counts.
 
 
+Core Library
+~~~~~~~~~~~~
+
+* `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
+  process management and a future asynchronous connect implementation, a
+  :class:`mitogen.parent.TimerList` API is available.
+
+
 Thanks!
 ~~~~~~~
 
